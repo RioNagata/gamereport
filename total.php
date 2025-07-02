@@ -1,24 +1,72 @@
 <?php 
 
 include 'config.php';
-// Get meta_value and count of occurrences
-$result = mysqli_query($link, "
-  SELECT meta_value, COUNT(*) as count 
-  FROM `wp_gf_entry_meta` 
-  WHERE `meta_key` = '3' 
-  GROUP BY meta_value 
-  ORDER BY count DESC
-");
 
-$data = [];
-if ($result && mysqli_num_rows($result) > 0) {
-  while ($row = mysqli_fetch_assoc($result)) {
-    $data[] = [
-      'name' => $row['meta_value'],
-      'count' => $row['count']
-    ];
-  }
+$gameGenre = mysqli_query($link, "SELECT DISTINCT `meta_value` FROM `wp_gf_entry_meta` WHERE `meta_key` = '4'");
+$gameConsole = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '3' GROUP By meta_value");
+$game = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '8' GROUP By meta_value");
+
+$genrearray = array(); // Make sure to initialize the array
+while ($genre = mysqli_fetch_array($gameGenre, MYSQLI_NUM)) {
+    $genrearray[] = $genre[0];
 }
+
+$consolearray = array(); // Make sure to initialize the array
+while ($console = mysqli_fetch_array($gameConsole, MYSQLI_NUM)) {
+    $consolearray[] = $console[0];
+}
+
+$gamearray = array(); // Make sure to initialize the array
+while ($games = mysqli_fetch_array($game, MYSQLI_NUM)) {
+    $gamearray[] = $games[0];
+}
+
+
+$allcount = $link->prepare("SELECT * FROM wp_gf_entry where status = 'active'");
+$allcount->execute();
+$allresult = $allcount->get_result();
+$allresultcount = mysqli_num_rows($allresult);
+
+$pscount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = 'Switch'");
+$pscount->execute();
+$psresult = $pscount->get_result();
+$psresultcount = mysqli_num_rows($psresult);
+
+foreach($sevenDays as $dates){
+    $dailycount = $link->prepare("SELECT * FROM wp_gf_entry WHERE date_created Like '%$dates%'");
+    $dailycount->execute();
+    $dailyresult = $dailycount->get_result();
+    $dailyresultcount = mysqli_num_rows($dailyresult);
+    $sevenDaysPoint[] = array("y" => $dailyresultcount, "label" => $dates);
+}
+
+foreach($genrearray as $data){
+  $genrecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
+  $genrecount->execute();
+  $genreresult = $genrecount->get_result();
+  $genreresultcount = mysqli_num_rows($genreresult);
+  $genreResultArray[] = array("y" => $genreresultcount, "label" => $data);
+}
+rsort($genreResultArray);
+
+foreach($consolearray as $data){
+  $consolecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
+  $consolecount->execute();
+  $consoleresult = $consolecount->get_result();
+  $consoleresultcount = mysqli_num_rows($consoleresult);
+  $consoleResultArray[] = array("y" => $consoleresultcount, "label" => $data);
+}
+rsort($consoleResultArray);
+
+foreach($gamearray as $data){
+  $gamecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
+  $gamecount->execute();
+  $gameresult = $gamecount->get_result();
+  $gameresultcount = mysqli_num_rows($gameresult);
+  $gameResultArray[] = array("y" => $gameresultcount, "label" => $data);
+}
+rsort($gameResultArray);
+
 mysqli_close($link);
 ?>
 
@@ -35,22 +83,63 @@ mysqli_close($link);
   <script>
 window.onload = function () {
  
-var chart = new CanvasJS.Chart("chartContainer", {
-	title: {
-		text: "Entries for Last 7 Days"
+var genrechart = new CanvasJS.Chart("chartContainer1", {
+	animationEnabled: true,
+	theme: "light2",
+	title:{
+		text: "Top Popular Game Consoles"
 	},
 	axisY: {
-		title: "Number of Entries"
+		title: ""
 	},
 	data: [{
-		type: "line",
-		dataPoints: <?php echo json_encode($sevenDaysPoint, JSON_NUMERIC_CHECK); ?>
+		type: "column",
+		dataPoints: <?php echo json_encode($genreResultArray, JSON_NUMERIC_CHECK); ?>
 	}]
 });
-chart.render();
+genrechart.render();
+
+var consolechart = new CanvasJS.Chart("chartContainer2", {
+	animationEnabled: true,
+	theme: "light2",
+	title:{
+		text: "Top Popular Game Consoles"
+	},
+	axisY: {
+		title: ""
+	},
+	data: [{
+		type: "column",
+		dataPoints: <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?>
+	}]
+});
+consolechart.render();
+
+var gamechart = new CanvasJS.Chart("chartContainer3", {
+	animationEnabled: true,
+	theme: "light2",
+	title:{
+		text: "Top Popular Game Consoles"
+	},
+	axisY: {
+		title: ""
+	},
+	data: [{
+		type: "column",
+		dataPoints: <?php echo json_encode($gameResultArray, JSON_NUMERIC_CHECK); ?>
+	}]
+});
+gamechart.render();
  
 }
 </script>
+<script>
+  /* Data straight from PHP */
+  const genreData   = <?php echo json_encode($genreResultArray   ?? []); ?>;
+  const consoleData = <?php echo json_encode($consoleResultArray ?? []); ?>;
+  const gameData    = <?php echo json_encode($gameResultArray    ?? []); ?>;
+</script>
+
 </head>
 
 <body>
@@ -67,101 +156,164 @@ chart.render();
 
       <div>
         <h1></h1>
-          <div class="table-chart-wrapper mb-4">
-          <div>
-            <table id="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Count</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <!-- ============ TAB NAV ============ -->
+<ul class="nav nav-tabs mb-3" id="statsTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="genre-tab"   data-bs-toggle="tab" data-bs-target="#genre-pane"
+            type="button" role="tab" aria-controls="genre-pane"   aria-selected="true">
+      Genres
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link"        id="console-tab" data-bs-toggle="tab" data-bs-target="#console-pane"
+            type="button" role="tab" aria-controls="console-pane" aria-selected="false">
+      Consoles
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link"        id="game-tab"    data-bs-toggle="tab" data-bs-target="#game-pane"
+            type="button" role="tab" aria-controls="game-pane"    aria-selected="false">
+      Games
+    </button>
+  </li>
+</ul>
 
-            <div class="pagination">
-              <button id="prevBtn">Previous</button>
-              <span id="pageInfo"></span>
-              <button id="nextBtn">Next</button>
-            </div>
-          </div>
-          <div>
-            <div id="chartContainer" style="height: 370px; width: 100%;"></div>
-            <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
-          </div>
-        </div>
-    </div>
+<!-- ============ TAB PANES ============ -->
+<div class="tab-content">
 
-
-      <div class="card-box">
-        <div class="card bg-white">
-          <h5>Console Ranking</h5>
-          <ul class="list-group">
-            <?php 
-            foreach($consoleResultArray as $games){
-              ?><li class="list-group-item"><?php echo $games["label"];?> - <?php echo $games["y"];?></li>
-              <?php
-            }
-            ?>
-          </ul>
+  <!-- ===== Genres ===== -->
+  <div class="tab-pane fade show active" id="genre-pane" role="tabpanel" aria-labelledby="genre-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="genre-section">
+        <h5 class="mb-2">Top Genres</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn">Previous</button>
+          <span class="pageInfo"></span>
+          <button class="nextBtn">Next</button>
         </div>
-        <div class="card bg-white">
-          <h5>Game Ranking</h5>
-          <ul class="list-group">
-          <?php 
-            foreach($gameResultArray as $games){
-              ?><li class="list-group-item"><?php echo $games["label"];?> - <?php echo $games["y"];?></li>
-              <?php
-            }
-            ?>
-          </ul>
-        </div>
+      </div>
+      <div>
+        <div id="chartContainer1" style="height:370px;width:100%;"></div>
       </div>
     </div>
   </div>
+
+  <!-- ===== Consoles ===== -->
+  <div class="tab-pane fade" id="console-pane" role="tabpanel" aria-labelledby="console-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="console-section">
+        <h5 class="mb-2">Top Consoles</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn">Previous</button>
+          <span class="pageInfo"></span>
+          <button class="nextBtn">Next</button>
+        </div>
+      </div>
+      <div>
+        <div id="chartContainer2" style="height:370px;width:100%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Games ===== -->
+  <div class="tab-pane fade" id="game-pane" role="tabpanel" aria-labelledby="game-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="game-section">
+        <h5 class="mb-2">Top Games</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn">Previous</button>
+          <span class="pageInfo"></span>
+          <button class="nextBtn">Next</button>
+        </div>
+      </div>
+      <div>
+        <div id="chartContainer3" style="height:370px;width:100%;"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.tab-content -->
+
+    </div>
+  </div>
+  <!-- ============ SCRIPTS ============ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+
+<script>
+/* --- paginator already in your file, just call it again if needed --- */
+initPaginatedTable("genre-section",   genreData);
+initPaginatedTable("console-section", consoleData);
+initPaginatedTable("game-section",    gameData);
+
+/* --- one CanvasJS chart per tab --- */
+const charts = {
+  genre:   new CanvasJS.Chart("chartGenres",   { animationEnabled:true, theme:"light2", title:{text:"Top Genres"},   data:[{type:"column", dataPoints: genreData}] }),
+  console: new CanvasJS.Chart("chartConsoles", { animationEnabled:true, theme:"light2", title:{text:"Top Consoles"}, data:[{type:"column", dataPoints: consoleData}] }),
+  game:    new CanvasJS.Chart("chartGames",    { animationEnabled:true, theme:"light2", title:{text:"Top Games"},    data:[{type:"column", dataPoints: gameData}] })
+};
+charts.genre.render();         // first tab is visible
+
+/* Lazy‑render charts when their tab becomes visible */
+document.getElementById('statsTabs').addEventListener('shown.bs.tab', e => {
+  const id = e.target.id;                        // genre-tab / console-tab / game-tab
+  if (id.startsWith('console')) charts.console.render();
+  if (id.startsWith('game'))    charts.game.render();
+});
+</script>
   <script>
-    const data = <?php echo json_encode($data); ?>;
-    const rowsPerPage = 10;
-    let currentPage = 1;
+  /* ---------- generic paginator ---------- */
+  function initPaginatedTable(sectionId, data, rowsPerPage = 5) {
+    let page = 1;
+    const section   = document.getElementById(sectionId);
+    const tbody     = section.querySelector("tbody");
+    const prevBtn   = section.querySelector(".prevBtn");
+    const nextBtn   = section.querySelector(".nextBtn");
+    const pageInfo  = section.querySelector(".pageInfo");
 
-    function renderTable() {
-      const start = (currentPage - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const paginatedData = data.slice(start, end);
+    const render = () => {
+      const start = (page - 1) * rowsPerPage;
+      const slice = data.slice(start, start + rowsPerPage);
 
-      const tbody = document.querySelector("#data-table tbody");
       tbody.innerHTML = "";
-
-      paginatedData.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${row.name}</td><td>${row.count}</td>`;
-        tbody.appendChild(tr);
+      slice.forEach(r => {
+        tbody.insertAdjacentHTML("beforeend",
+          `<tr><td>${r.label}</td><td>${r.y}</td></tr>`);
       });
 
-      document.getElementById("pageInfo").textContent = 
-        `Page ${currentPage} of ${Math.ceil(data.length / rowsPerPage)}`;
+      const pages = Math.max(1, Math.ceil(data.length / rowsPerPage));
+      pageInfo.textContent = `Page ${page} of ${pages}`;
+      prevBtn.disabled = page === 1;
+      nextBtn.disabled = page === pages;
+    };
 
-      document.getElementById("prevBtn").disabled = currentPage === 1;
-      document.getElementById("nextBtn").disabled = 
-        currentPage === Math.ceil(data.length / rowsPerPage);
-    }
+    prevBtn.onclick = () => { if (page > 1) { page--; render(); } };
+    nextBtn.onclick = () => {
+      const pages = Math.ceil(data.length / rowsPerPage);
+      if (page < pages) { page++; render(); }
+    };
 
-    document.getElementById("prevBtn").addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-      }
-    });
+    render();  // first draw
+  }
 
-    document.getElementById("nextBtn").addEventListener("click", () => {
-      if (currentPage < Math.ceil(data.length / rowsPerPage)) {
-        currentPage++;
-        renderTable();
-      }
-    });
+  /* ---------- kick off each table ---------- */
+  initPaginatedTable("genre-section",   genreData);
+  initPaginatedTable("console-section", consoleData);
+  initPaginatedTable("game-section",    gameData);
+</script>
 
-    renderTable();
-  </script>
 </body>
 
 </html>
