@@ -80,27 +80,6 @@ mysqli_close($link);
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script>
-window.onload = function () {
- 
-var chart = new CanvasJS.Chart("chartContainer", {
-	animationEnabled: true,
-	theme: "light2",
-	title:{
-		text: "Top Popular Game Consoles"
-	},
-	axisY: {
-		title: ""
-	},
-	data: [{
-		type: "column",
-		dataPoints: <?php echo json_encode($genreResultArray, JSON_NUMERIC_CHECK); ?>
-	}]
-});
-chart.render();
- 
-}
-</script>
 </head>
 
 <body>
@@ -114,78 +93,183 @@ chart.render();
         <div class="card bg-light">Popular Console<h5><?php echo $consoleResultArray[0]["y"]?></h5><p><?php echo $consoleResultArray[0]["label"]?></p></div>
         <div class="card bg-light">Popular Game<h5><?php echo $gameResultArray[0]["y"]?></h5><p><?php echo $gameResultArray[0]["label"]?></p></div>
       </div>
+      <!-- ==========  NAV‑TABS  ========== -->
+<ul class="nav nav-tabs mb-3" id="statsTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="genre-tab"
+            data-bs-toggle="tab" data-bs-target="#genre-pane"
+            type="button" role="tab" aria-controls="genre-pane" aria-selected="true">
+      Genres
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="console-tab"
+            data-bs-toggle="tab" data-bs-target="#console-pane"
+            type="button" role="tab" aria-controls="console-pane" aria-selected="false">
+      Consoles
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="game-tab"
+            data-bs-toggle="tab" data-bs-target="#game-pane"
+            type="button" role="tab" aria-controls="game-pane" aria-selected="false">
+      Games
+    </button>
+  </li>
+</ul>
 
-      <div>
-        <h1></h1>
-          <div class="table-chart-wrapper mb-4">
-          <div>
-            <table id="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Count</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+<!-- ==========  TAB‑PANES  ========== -->
+<div class="tab-content">
 
-            <div class="pagination">
-              <button id="prevBtn">Previous</button>
-              <span id="pageInfo"></span>
-              <button id="nextBtn">Next</button>
-            </div>
-          </div>
-          <div>
-            <div id="chartContainer" style="height: 370px; width: 100%;"></div>
-            <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
-          </div>
+  <!-- ===== Genres ===== -->
+  <div class="tab-pane fade show active" id="genre-pane" role="tabpanel" aria-labelledby="genre-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="genre-section">
+        <h5 class="mb-2">Top Genres</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
+          <span class="pageInfo mx-2"></span>
+          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
         </div>
-    </div>
+      </div>
+      <div>
+        <div id="chartGenres" class="chart"></div>
+      </div>
     </div>
   </div>
-  <script>
-    const data = <?php echo json_encode($genreResultArray); ?>;
-    const rowsPerPage = 10;
-    let currentPage = 1;
 
-    function renderTable() {
-      const start = (currentPage - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const paginatedData = data.slice(start, end);
+  <!-- ===== Consoles ===== -->
+  <div class="tab-pane fade" id="console-pane" role="tabpanel" aria-labelledby="console-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="console-section">
+        <h5 class="mb-2">Top Consoles</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
+          <span class="pageInfo mx-2"></span>
+          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
+        </div>
+      </div>
+      <div>
+        <div id="chartConsoles" class="chart"></div>
+      </div>
+    </div>
+  </div>
 
-      const tbody = document.querySelector("#data-table tbody");
-      tbody.innerHTML = "";
+  <!-- ===== Games ===== -->
+  <div class="tab-pane fade" id="game-pane" role="tabpanel" aria-labelledby="game-tab">
+    <div class="table-chart-wrapper mb-4">
+      <div class="paginated-section" id="game-section">
+        <h5 class="mb-2">Top Games</h5>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Count</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="pagination">
+          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
+          <span class="pageInfo mx-2"></span>
+          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
+        </div>
+      </div>
+      <div>
+        <div id="chartGames" class="chart"></div>
+      </div>
+    </div>
+  </div>
 
-      paginatedData.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${row.name}</td><td>${row.count}</td>`;
-        tbody.appendChild(tr);
-      });
+</div><!-- /.tab-content -->
 
-      document.getElementById("pageInfo").textContent = 
-        `Page ${currentPage} of ${Math.ceil(data.length / rowsPerPage)}`;
 
-      document.getElementById("prevBtn").disabled = currentPage === 1;
-      document.getElementById("nextBtn").disabled = 
-        currentPage === Math.ceil(data.length / rowsPerPage);
-    }
+<!-- ==========  SCRIPTS (Bootstrap + CanvasJS)  ========== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
+<!-- put this right after you include CanvasJS and BEFORE you call initPaginatedTable -->
+<script>
+  /* >>> JavaScript versions of the PHP arrays <<< */
+  const genreData   = <?php echo json_encode($genreResultArray,   JSON_NUMERIC_CHECK); ?>;
+  const consoleData = <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?>;
+  const gameData    = <?php echo json_encode($gameResultArray,    JSON_NUMERIC_CHECK); ?>;
+</script>
+<script>
+const genreChart   = new CanvasJS.Chart("chartGenres", {
+  animationEnabled: true, theme: "light2",
+  title:{ text:"Top Genres" },
+  data :[{ type:"column", dataPoints: <?php echo json_encode($genreResultArray, JSON_NUMERIC_CHECK); ?> }]
+});
 
-    document.getElementById("prevBtn").addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-      }
-    });
+const consoleChart = new CanvasJS.Chart("chartConsoles", {
+  animationEnabled: true, theme: "light2",
+  title:{ text:"Top Consoles" },
+  data :[{ type:"column", dataPoints: <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?> }]
+});
 
-    document.getElementById("nextBtn").addEventListener("click", () => {
-      if (currentPage < Math.ceil(data.length / rowsPerPage)) {
-        currentPage++;
-        renderTable();
-      }
-    });
+const gameChart    = new CanvasJS.Chart("chartGames", {
+  animationEnabled: true, theme: "light2",
+  title:{ text:"Top Games" },
+  data :[{ type:"column", dataPoints: <?php echo json_encode($gameResultArray, JSON_NUMERIC_CHECK); ?> }]
+});
 
-    renderTable();
-  </script>
+/* ---------- paginator helper ---------- */
+function initPaginatedTable (sectionId, data, rowsPerPage = 5) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  let page = 1;
+  const tbody    = section.querySelector('tbody');
+  const prevBtn  = section.querySelector('.prevBtn');
+  const nextBtn  = section.querySelector('.nextBtn');
+  const pageInfo = section.querySelector('.pageInfo');
+
+  const render = () => {
+    const start = (page - 1) * rowsPerPage;
+    const slice = data.slice(start, start + rowsPerPage);
+    tbody.innerHTML = slice.map(r => `<tr><td>${r.label}</td><td>${r.y}</td></tr>`).join('');
+    const pages = Math.max(1, Math.ceil(data.length / rowsPerPage));
+    pageInfo.textContent = `Page ${page} of ${pages}`;
+    prevBtn.disabled = page === 1;
+    nextBtn.disabled = page === pages;
+  };
+  prevBtn.onclick = () => { if (page > 1) page--; render(); };
+  nextBtn.onclick = () => { if (page < Math.ceil(data.length / rowsPerPage)) page++; render(); };
+  render();
+}
+
+/* helper renders twice so width is 100 % after flex layout */
+const safeRender = c => { c.render(); requestAnimationFrame(() => c.render()); };
+
+/* first visible tab */
+safeRender(genreChart);
+
+/* re‑render when a tab becomes visible */
+document.getElementById('statsTabs')
+        .addEventListener('shown.bs.tab', e => {
+  if (e.target.id === 'console-tab') safeRender(consoleChart);
+  if (e.target.id === 'game-tab')    safeRender(gameChart);
+  if (e.target.id === 'genre-tab')   safeRender(genreChart);
+  window.dispatchEvent(new Event('resize'));   // ensure final resize pass
+});
+
+/* keep charts responsive on window resize */
+window.addEventListener('resize', () => {
+  [genreChart, consoleChart, gameChart].forEach(safeRender);
+});
+</script>
+<!-- ↓ your paginator + chart code here ↓ -->
+<script>
+  /* data arrays already emitted by PHP above */
+  initPaginatedTable('genre-section',   genreData);
+  initPaginatedTable('console-section', consoleData);
+  initPaginatedTable('game-section',    gameData);
+
+  /* build charts … safeRender … tab listener … (full block we sent) */
+</script>
+
 </body>
 
 </html>

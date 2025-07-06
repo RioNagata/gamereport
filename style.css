@@ -1,265 +1,120 @@
+/* -------------------------------------------------
+   Base
+--------------------------------------------------*/
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;600&display=swap");
+
+:root {
+  --brand-blue: #007bff;
+  --brand-blue-dark: #0056b3;
+  --bg-light:   #f5f6fa;
+  --block-tint: #f5f7fa;      /* background of each table‑chart row */
+}
+
+* { box-sizing: border-box; }
+
 body {
-    background: #f5f6fa;
-    font-family: 'Roboto', sans-serif;
-    margin: 0;
-    padding: 20px;
-  }
-
-  .d-flex {
-    display: flex;
-  }
-
-  .content {
-    width: 100%;
-    padding: 20px;
-  }
-
-  h3 {
-    margin-bottom: 20px;
-  }
-
-  .card-box {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 20px;
-  }
-
-  .card {
-    flex: 1;
-    min-width: 200px;
-    padding: 20px;
-    border-radius: 10px;
-    background: #ffffff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-
-  .chart-box {
-    width: 100%;
-    background: #a3a7ad;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    overflow: hidden;
-  }
-
-  #chartContainer {
-    width: 100%;
-    height: 370px;
-  }
-
-  .table-chart-wrapper {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    margin-bottom: 40px;
-    width: 100%;
-    background: #d7dbe0;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    overflow: hidden;
-  }
-  
-  .table-chart-wrapper > div {
-    flex: 1;
-  }
-  
-  #data-table {
-    width: 100%;
-  }
-  
-  
-
-  h5 {
-    margin-top: 10px;
-    font-size: 20px;
-  }
-
-  .list-group {
-    margin-top: 10px;
-    padding-left: 0;
-    list-style: none;
-  }
-
-  .list-group-item {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-  }
-
-  .list-group-item:last-child {
-    border-bottom: none;
-  }
-
-  /* Add to style.css or inside a <style> tag in the HTML <head> */
-
-.sidebar {
-  height: 100vh;
-  width: 250px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  background-color: #1f1f2e;
-  color: #fff;
-  padding-top: 20px;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.sidebar h4 {
-  text-align: center;
-  margin-bottom: 30px;
-  font-weight: 600;
-  color: #00bcd4;
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-}
-
-.sidebar ul li {
-  padding: 15px 20px;
-  color: #ccc;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: background 0.3s, color 0.3s;
-}
-
-.sidebar ul li i {
-  margin-right: 15px;
-  font-size: 20px;
-}
-
-.sidebar ul li:hover {
-  background-color: #29293d;
-  color: #fff;
-}
-
-.sidebar ul li:hover i {
-  color: #00bcd4;
-}
-
-.sidebar ul li a {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-  color: #ccc;
-  transition: background 0.3s, color 0.3s;
-}
-
-.sidebar ul li a i {
-  margin-right: 15px;
-  font-size: 20px;
-}
-
-.sidebar ul li a:hover {
-  background-color: #29293d;
-  color: #fff;
-}
-
-.sidebar ul li a:hover i {
-  color: #00bcd4;
-}
-
-
-/* Optional: Add responsiveness */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 200px;
-  }
-
-  .sidebar ul li {
-    padding: 12px 15px;
-  }
-}
-
-/* Wrapper to hold sidebar and content next to each other */
-.wrapper {
-  display: flex;
-}
-
-/* Adjust main content to sit next to sidebar */
-.content {
-  margin-left: 250px; /* match sidebar width */
-  width: calc(100% - 250px);
+  margin: 0;
   padding: 20px;
+  font-family: 'Roboto', sans-serif;
+  background: var(--bg-light);
 }
 
-/* On smaller screens: stack layout vertically */
-@media (max-width: 768px) {
-  .sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-  }
+h3   { margin-bottom: 20px; }
+h5   { margin-top: 10px; font-size: 20px; }
+table{ width: 100%; border-collapse: collapse; overflow: hidden; }
 
-  .content {
-    margin-left: 0;
-    width: 100%;
-  }
+/* -------------------------------------------------
+   Layout helpers
+--------------------------------------------------*/
+.d-flex   { display: flex; }
+.wrapper  { display: flex; }
+.content  { width: 100%; padding: 20px; }
+.card-box { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+.card     { flex:1; min-width:200px; padding:20px; background:#fff; border-radius:10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,.1); }
 
-  .wrapper {
-    flex-direction: column;
-  }
+/* -------------------------------------------------
+   Sidebar
+--------------------------------------------------*/
+.sidebar {
+  position: fixed; top:0; left:0; height:100vh; width:250px;
+  background:#1f1f2e; color:#ccc; padding-top:20px;
+  box-shadow: 2px 0 10px rgba(0,0,0,.2);
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  border-radius: 6px;
-  overflow: hidden;
-}
+.sidebar h4           { color:#00bcd4; text-align:center; margin-bottom:30px; font-weight:600; }
+.sidebar ul           { list-style:none; padding:0; }
+.sidebar li,
+.sidebar a            { display:flex; align-items:center; padding:15px 20px;
+                        color:inherit; cursor:pointer; transition:.3s; text-decoration:none; }
+.sidebar li i,
+.sidebar a i          { margin-right:15px; font-size:20px; }
+.sidebar li:hover,
+.sidebar a:hover      { background:#29293d; color:#fff; }
+.sidebar li:hover i,
+.sidebar a:hover i    { color:#00bcd4; }
 
-thead {
-  background-color: #007BFF;
-  color: white;
+/* -------------------------------------------------
+   Responsive sidebar
+--------------------------------------------------*/
+@media (max-width:768px){
+  .sidebar         { position:relative; width:100%; height:auto; }
+  .content         { margin-left:0; width:100%; }
+  .wrapper         { flex-direction:column; }
 }
+.content { margin-left:250px; width:calc(100% - 250px); }
+@media (max-width:768px){ .content{margin-left:0;} }
 
-th, td {
-  padding: 14px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e9ecef;
-}
-
-tbody tr:hover {
-  background-color: #f1f1f1;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-  gap: 12px;
-}
-
-.pagination button {
-  padding: 8px 16px;
-  font-size: 14px;
-  background-color: #007BFF;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s ease;
+/* -------------------------------------------------
+   Section title (h1)
+--------------------------------------------------*/
+.table-title {
+  margin: 0 0 1rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  text-align: center;
 }
 
-.pagination button:hover {
-  background-color: #0056b3;
+/* -------------------------------------------------
+   Table + chart wrapper
+--------------------------------------------------*/
+.table-chart-wrapper{
+  background: #e3e4e8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display:flex;
+  gap:20px;
+  align-items:flex-start;
+}
+.table-chart-wrapper > div{
+  flex:0 0 50%;   /* exact half */
+  max-width:50%;
+  min-width:0;    /* let the table shrink if needed */
 }
 
-.pagination button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
+/* -------------------------------------------------
+   Data table
+--------------------------------------------------*/
+thead          { background:var(--brand-blue); color:#fff; }
+th,td          { padding:14px 16px; border-bottom:1px solid #e9ecef; text-align:left; }
+tbody tr:hover { background:#f1f1f1; }
+table          { background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
 
-#pageInfo {
-  font-size: 14px;
-  color: #333;
+/* -------------------------------------------------
+   Pagination
+--------------------------------------------------*/
+.pagination{
+  margin-top:20px; gap:12px;
+  display:flex; justify-content:center; align-items:center;
 }
+.pagination button{
+  padding:8px 16px; font-size:14px; border:none; border-radius:4px;
+  background:var(--brand-blue); color:#fff; cursor:pointer; transition:.2s;
+}
+.pagination button:hover       { background:var(--brand-blue-dark); }
+.pagination button:disabled    { background:#ccc; cursor:not-allowed; }
+#pageInfo{ font-size:14px; color:#333; }
 
+/* -------------------------------------------------
+   Chart container
+--------------------------------------------------*/
+.chart{ height:370px; width:100%; }
