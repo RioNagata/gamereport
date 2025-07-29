@@ -1,275 +1,166 @@
-<?php 
-
+<?php
 include 'config.php';
 
-$gameGenre = mysqli_query($link, "SELECT DISTINCT `meta_value` FROM `wp_gf_entry_meta` WHERE `meta_key` = '4'");
-$gameConsole = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '3' GROUP By meta_value");
-$game = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '8' GROUP By meta_value");
+$categoryA = 'PlayStation';
+$categoryB = 'Nintendo Switch';
 
-$genrearray = array(); // Make sure to initialize the array
-while ($genre = mysqli_fetch_array($gameGenre, MYSQLI_NUM)) {
-    $genrearray[] = $genre[0];
+function getEntryIDsByPlatform($link, $platform) {
+    $stmt = $link->prepare("SELECT entry_id FROM wp_gf_entry_meta WHERE meta_key = '3' AND meta_value = ?");
+    $stmt->bind_param("s", $platform);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $ids = [];
+    while ($row = $result->fetch_assoc()) {
+        $ids[] = $row['entry_id'];
+    }
+    return $ids;
 }
 
-$consolearray = array(); // Make sure to initialize the array
-while ($console = mysqli_fetch_array($gameConsole, MYSQLI_NUM)) {
-    $consolearray[] = $console[0];
+function countByMeta($link, $entryIDs, $metaKey) {
+    if (empty($entryIDs)) return [];
+    $idList = implode(',', array_map('intval', $entryIDs));
+    $query = "SELECT meta_value, COUNT(*) as count
+              FROM wp_gf_entry_meta
+              WHERE meta_key = ? AND entry_id IN ($idList)
+              GROUP BY meta_value";
+
+    $stmt = $link->prepare($query);
+    $stmt->bind_param("s", $metaKey);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $counts = [];
+    while ($row = $result->fetch_assoc()) {
+        $counts[$row['meta_value']] = $row['count'];
+    }
+    return $counts;
 }
 
-$gamearray = array(); // Make sure to initialize the array
-while ($games = mysqli_fetch_array($game, MYSQLI_NUM)) {
-    $gamearray[] = $games[0];
+$idsA = getEntryIDsByPlatform($link, $categoryA);
+$idsB = getEntryIDsByPlatform($link, $categoryB);
+
+$data = [
+    'entries' => [
+        $categoryA => count($idsA),
+        $categoryB => count($idsB),
+    ],
+    'genres' => [
+        $categoryA => countByMeta($link, $idsA, '4'),
+        $categoryB => countByMeta($link, $idsB, '4'),
+    ],
+    'budget' => [
+        $categoryA => countByMeta($link, $idsA, '5'),
+        $categoryB => countByMeta($link, $idsB, '5'),
+    ],
+    'console' => [
+        $categoryA => countByMeta($link, $idsA, '6'),
+        $categoryB => countByMeta($link, $idsB, '6'),
+    ],
+    'game_pass' => [
+        $categoryA => countByMeta($link, $idsA, '10'),  
+        $categoryB => countByMeta($link, $idsB, '10'),
+    ],
+    'delivery' => [
+        $categoryA => countByMeta($link, $idsA, '9'),
+        $categoryB => countByMeta($link, $idsB, '9'),
+    ],
+    'franchise' => [
+        $categoryA => countByMeta($link, $idsA, '8'),
+        $categoryB => countByMeta($link, $idsB, '8'),
+    ],
+];
+
+function renderPaginatedTab($tabId, $dataA, $dataB, $categoryA, $categoryB) {
+    $all_keys = array_unique(array_merge(array_keys($dataA), array_keys($dataB)));
+    sort($all_keys); // sort keys alphabetically
+
+    // Chart containers
+    echo "<div class='tab-pane fade' id='tab-$tabId' role='tabpanel' aria-labelledby='$tabId-tab'>";
+    echo "<div class='row mb-4'>";
+    echo "</div>"; // Close row
+
+    // Table container
+    echo "<div class='paginated-section mt-4'>";
+    echo "<table class='compare-table data-table'>";
+    echo "<thead><tr><th>Option</th><th>" . htmlspecialchars($categoryA) . "</th><th>" . htmlspecialchars($categoryB) . "</th></tr></thead><tbody>";
+
+    $jsDataA = [];
+    $jsDataB = [];
+
+    foreach ($all_keys as $key) {
+        $countA = $dataA[$key] ?? 0;
+        $countB = $dataB[$key] ?? 0;
+
+        // Escape for display
+        $escapedKey = htmlspecialchars($key);
+        echo "<tr><td>$escapedKey</td><td>$countA</td><td>$countB</td></tr>";
+
+        // Prepare for JS chart
+        $safeKey = addslashes($key);
+        $jsDataA[] = "{ label: \"$safeKey\", y: $countA }";
+        $jsDataB[] = "{ label: \"$safeKey\", y: $countB }";
+    }
+
+    echo "</tbody></table>";
+
+    // Pagination controls
+    echo "<div class='pagination mt-2'>";
+    echo "<button class='prevBtn btn btn-sm btn-secondary'>Previous</button>";
+    echo "<span class='pageInfo mx-2'></span>";
+    echo "<button class='nextBtn btn btn-sm btn-secondary'>Next</button>";
+    echo "</div></div></div>";
 }
-
-
-$allcount = $link->prepare("SELECT * FROM wp_gf_entry where status = 'active'");
-$allcount->execute();
-$allresult = $allcount->get_result();
-$allresultcount = mysqli_num_rows($allresult);
-
-$pscount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = 'Switch'");
-$pscount->execute();
-$psresult = $pscount->get_result();
-$psresultcount = mysqli_num_rows($psresult);
-
-foreach($sevenDays as $dates){
-    $dailycount = $link->prepare("SELECT * FROM wp_gf_entry WHERE date_created Like '%$dates%'");
-    $dailycount->execute();
-    $dailyresult = $dailycount->get_result();
-    $dailyresultcount = mysqli_num_rows($dailyresult);
-    $sevenDaysPoint[] = array("y" => $dailyresultcount, "label" => $dates);
-}
-
-foreach($genrearray as $data){
-  $genrecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $genrecount->execute();
-  $genreresult = $genrecount->get_result();
-  $genreresultcount = mysqli_num_rows($genreresult);
-  $genreResultArray[] = array("y" => $genreresultcount, "label" => $data);
-}
-rsort($genreResultArray);
-
-foreach($consolearray as $data){
-  $consolecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $consolecount->execute();
-  $consoleresult = $consolecount->get_result();
-  $consoleresultcount = mysqli_num_rows($consoleresult);
-  $consoleResultArray[] = array("y" => $consoleresultcount, "label" => $data);
-}
-rsort($consoleResultArray);
-
-foreach($gamearray as $data){
-  $gamecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $gamecount->execute();
-  $gameresult = $gamecount->get_result();
-  $gameresultcount = mysqli_num_rows($gameresult);
-  $gameResultArray[] = array("y" => $gameresultcount, "label" => $data);
-}
-rsort($gameResultArray);
-
-mysqli_close($link);
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GameInfo</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <div class="d-flex">
-    <?php include 'navigation.php'?>
-    <div class="content w-100">
-      <h3>Dashboard</h3>
-      <div class="card-box mb-4">
-        <div class="card bg-light">All Entries<h4><?php echo $allresultcount;?></h4></div>
-        <div class="card bg-light">Popular Genre<h5><?php echo $genreResultArray[0]["y"]?></h5><p><?php echo $genreResultArray[0]["label"]?></p></div>
-        <div class="card bg-light">Popular Console<h5><?php echo $consoleResultArray[0]["y"]?></h5><p><?php echo $consoleResultArray[0]["label"]?></p></div>
-        <div class="card bg-light">Popular Game<h5><?php echo $gameResultArray[0]["y"]?></h5><p><?php echo $gameResultArray[0]["label"]?></p></div>
-      </div>
-      <!-- ==========  NAV‑TABS  ========== -->
-<ul class="nav nav-tabs mb-3" id="statsTabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="genre-tab"
-            data-bs-toggle="tab" data-bs-target="#genre-pane"
-            type="button" role="tab" aria-controls="genre-pane" aria-selected="true">
-      Genres
-    </button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="console-tab"
-            data-bs-toggle="tab" data-bs-target="#console-pane"
-            type="button" role="tab" aria-controls="console-pane" aria-selected="false">
-      Consoles
-    </button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="game-tab"
-            data-bs-toggle="tab" data-bs-target="#game-pane"
-            type="button" role="tab" aria-controls="game-pane" aria-selected="false">
-      Games
-    </button>
-  </li>
-</ul>
-
-<!-- ==========  TAB‑PANES  ========== -->
-<div class="tab-content">
-
-  <!-- ===== Genres ===== -->
-  <div class="tab-pane fade show active" id="genre-pane" role="tabpanel" aria-labelledby="genre-tab">
-    <div class="table-chart-wrapper mb-4">
-      <div class="paginated-section" id="genre-section">
-        <h5 class="mb-2">Top Genres</h5>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Count</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="pagination">
-          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
-          <span class="pageInfo mx-2"></span>
-          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
-        </div>
-      </div>
-      <div>
-        <div id="chartGenres" class="chart"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Consoles ===== -->
-  <div class="tab-pane fade" id="console-pane" role="tabpanel" aria-labelledby="console-tab">
-    <div class="table-chart-wrapper mb-4">
-      <div class="paginated-section" id="console-section">
-        <h5 class="mb-2">Top Consoles</h5>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Count</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="pagination">
-          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
-          <span class="pageInfo mx-2"></span>
-          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
-        </div>
-      </div>
-      <div>
-        <div id="chartConsoles" class="chart"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Games ===== -->
-  <div class="tab-pane fade" id="game-pane" role="tabpanel" aria-labelledby="game-tab">
-    <div class="table-chart-wrapper mb-4">
-      <div class="paginated-section" id="game-section">
-        <h5 class="mb-2">Top Games</h5>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Count</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="pagination">
-          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
-          <span class="pageInfo mx-2"></span>
-          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
-        </div>
-      </div>
-      <div>
-        <div id="chartGames" class="chart"></div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /.tab-content -->
-
-
-<!-- ==========  SCRIPTS (Bootstrap + CanvasJS)  ========== -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!DOCTYPE HTML>
+<html>
+<head>  
 <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
-<!-- put this right after you include CanvasJS and BEFORE you call initPaginatedTable -->
 <script>
-  /* >>> JavaScript versions of the PHP arrays <<< */
-  const genreData   = <?php echo json_encode($genreResultArray,   JSON_NUMERIC_CHECK); ?>;
-  const consoleData = <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?>;
-  const gameData    = <?php echo json_encode($gameResultArray,    JSON_NUMERIC_CHECK); ?>;
-</script>
-<script>
-const genreChart   = new CanvasJS.Chart("chartGenres", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Genres" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($genreResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
+window.onload = function () {
+<?php
+$chartIndex = 0;
+foreach ($data as $category => $platformData) {
+    foreach ($platformData as $platform => $values) {
+        $containerId = "chartContainer_" . $chartIndex;
 
-const consoleChart = new CanvasJS.Chart("chartConsoles", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Consoles" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
+        // Prepare data points
+        $dataPoints = [];
+        foreach ($values as $label => $count) {
+            $dataPoints[] = ["label" => $label, "y" => $count];
+        }
 
-const gameChart    = new CanvasJS.Chart("chartGames", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Games" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($gameResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
-
-/* ---------- paginator helper ---------- */
-function initPaginatedTable (sectionId, data, rowsPerPage = 5) {
-  const section = document.getElementById(sectionId);
-  if (!section) return;
-  let page = 1;
-  const tbody    = section.querySelector('tbody');
-  const prevBtn  = section.querySelector('.prevBtn');
-  const nextBtn  = section.querySelector('.nextBtn');
-  const pageInfo = section.querySelector('.pageInfo');
-
-  const render = () => {
-    const start = (page - 1) * rowsPerPage;
-    const slice = data.slice(start, start + rowsPerPage);
-    tbody.innerHTML = slice.map(r => `<tr><td>${r.label}</td><td>${r.y}</td></tr>`).join('');
-    const pages = Math.max(1, Math.ceil(data.length / rowsPerPage));
-    pageInfo.textContent = `Page ${page} of ${pages}`;
-    prevBtn.disabled = page === 1;
-    nextBtn.disabled = page === pages;
-  };
-  prevBtn.onclick = () => { if (page > 1) page--; render(); };
-  nextBtn.onclick = () => { if (page < Math.ceil(data.length / rowsPerPage)) page++; render(); };
-  render();
+        // Output JavaScript chart creation
+        echo "var chart{$chartIndex} = new CanvasJS.Chart(\"{$containerId}\", {
+            animationEnabled: true,
+            title: {
+                text: \"" . ucfirst($category) . " - " . $platform . "\"
+            },
+            data: [{
+                type: \"pie\",
+                showInLegend: true,
+                legendText: \"{label}\",
+                indexLabelFontSize: 14,
+                indexLabel: \"{label} - #percent%\",
+                yValueFormatString: \"#,##0\",
+                dataPoints: " . json_encode($dataPoints, JSON_NUMERIC_CHECK) . "
+            }]
+        });
+        chart{$chartIndex}.render();\n";
+        $chartIndex++;
+    }
 }
-
-/* helper renders twice so width is 100 % after flex layout */
-const safeRender = c => { c.render(); requestAnimationFrame(() => c.render()); };
-
-/* first visible tab */
-safeRender(genreChart);
-
-/* re‑render when a tab becomes visible */
-document.getElementById('statsTabs')
-        .addEventListener('shown.bs.tab', e => {
-  if (e.target.id === 'console-tab') safeRender(consoleChart);
-  if (e.target.id === 'game-tab')    safeRender(gameChart);
-  if (e.target.id === 'genre-tab')   safeRender(genreChart);
-  window.dispatchEvent(new Event('resize'));   // ensure final resize pass
-});
-
-/* keep charts responsive on window resize */
-window.addEventListener('resize', () => {
-  [genreChart, consoleChart, gameChart].forEach(safeRender);
-});
+?>
+};
 </script>
-<!-- ↓ your paginator + chart code here ↓ -->
-<script>
-  /* data arrays already emitted by PHP above */
-  initPaginatedTable('genre-section',   genreData);
-  initPaginatedTable('console-section', consoleData);
-  initPaginatedTable('game-section',    gameData);
-
-  /* build charts … safeRender … tab listener … (full block we sent) */
-</script>
-
+</head>
+<body>
+<?php
+$chartIndex = 0;
+foreach ($data as $category => $platformData) {
+    foreach ($platformData as $platform => $values) {
+        echo "<div id='chartContainer_{$chartIndex}' style='height: 370px; width: 100%; margin-bottom: 40px;'></div>\n";
+        $chartIndex++;
+    }
+}
+?>
 </body>
-
 </html>

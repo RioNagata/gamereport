@@ -77,13 +77,24 @@ table{ width: 100%; border-collapse: collapse; overflow: hidden; }
 /* -------------------------------------------------
    Table + chart wrapper
 --------------------------------------------------*/
-.table-chart-wrapper{
+.table-chart-wrapper {
   background: #e3e4e8;
   border-radius: 8px;
   padding: 1.5rem;
-  display:flex;
-  gap:20px;
-  align-items:flex-start;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.table-chart-wrapper .card {
+  flex: 1;
+  min-width: 300px;
+  max-width: 48%;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 .table-chart-wrapper > div{
   flex:0 0 50%;   /* exact half */
@@ -118,3 +129,23 @@ table          { background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(0
    Chart container
 --------------------------------------------------*/
 .chart{ height:370px; width:100%; }
+
+
+.compare-table, .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+    }
+
+    .compare-table th, .compare-table td,
+    .data-table th, .data-table td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: left;
+    }
+
+    .compare-table th, .data-table th {
+        background-color: #eaeaea;
+    }
+
+
