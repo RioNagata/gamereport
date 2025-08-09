@@ -63,10 +63,6 @@ $data = [
         $categoryA => countByMeta($link, $idsA, '6'),
         $categoryB => countByMeta($link, $idsB, '6'),
     ],
-    'game_pass' => [
-        $categoryA => countByMeta($link, $idsA, '10'),  
-        $categoryB => countByMeta($link, $idsB, '10'),
-    ],
     'delivery' => [
         $categoryA => countByMeta($link, $idsA, '9'),
         $categoryB => countByMeta($link, $idsB, '9'),
@@ -77,46 +73,57 @@ $data = [
     ],
 ];
 
-function renderPaginatedTab($tabId, $dataA, $dataB, $categoryA, $categoryB) {
+$chartConfigs = []; 
+
+function renderPaginatedTab($tabId, $dataA, $dataB, $categoryA, $categoryB, &$chartConfigs) {
     $all_keys = array_unique(array_merge(array_keys($dataA), array_keys($dataB)));
-    sort($all_keys); // sort keys alphabetically
+    sort($all_keys);
 
-    // Chart containers
     echo "<div class='tab-pane fade' id='tab-$tabId' role='tabpanel' aria-labelledby='$tabId-tab'>";
-    echo "<div class='row mb-4'>";
-    echo "</div>"; // Close row
+    echo "<div class='container-fluid px-0'>"; // Remove padding for edge-to-edge
+    echo "  <div class='row mb-4'>";
+    echo "    <div class='col-12'>";
+    echo "      <div id='chart-$tabId' style='height: 370px; width: 100%;'></div>";
+    echo "    </div>";
+    echo "  </div>";
 
-    // Table container
-    echo "<div class='paginated-section mt-4'>";
-    echo "<table class='compare-table data-table'>";
-    echo "<thead><tr><th>Option</th><th>" . htmlspecialchars($categoryA) . "</th><th>" . htmlspecialchars($categoryB) . "</th></tr></thead><tbody>";
+    echo "  <div class='row'>";
+    echo "    <div class='col-12'>";
+    echo "      <div class='paginated-section mt-4'>";
+    echo "        <table class='compare-table data-table w-100'>";
+    echo "        <thead><tr><th>Option</th><th>" . htmlspecialchars($categoryA) . "</th><th>" . htmlspecialchars($categoryB) . "</th></tr></thead><tbody>";
 
     $jsDataA = [];
     $jsDataB = [];
-
     foreach ($all_keys as $key) {
         $countA = $dataA[$key] ?? 0;
         $countB = $dataB[$key] ?? 0;
-
-        // Escape for display
         $escapedKey = htmlspecialchars($key);
         echo "<tr><td>$escapedKey</td><td>$countA</td><td>$countB</td></tr>";
-
-        // Prepare for JS chart
         $safeKey = addslashes($key);
         $jsDataA[] = "{ label: \"$safeKey\", y: $countA }";
         $jsDataB[] = "{ label: \"$safeKey\", y: $countB }";
     }
 
     echo "</tbody></table>";
+    echo "<div class='pagination mt-2'><button class='prevBtn btn btn-sm btn-secondary'>Previous</button><span class='pageInfo mx-2'></span><button class='nextBtn btn btn-sm btn-secondary'>Next</button></div>";
+    echo "      </div>";
+    echo "    </div>";
+    echo "  </div>";
+    echo "</div>"; // .container-fluid
+    echo "</div>"; // .tab-pane
 
-    // Pagination controls
-    echo "<div class='pagination mt-2'>";
-    echo "<button class='prevBtn btn btn-sm btn-secondary'>Previous</button>";
-    echo "<span class='pageInfo mx-2'></span>";
-    echo "<button class='nextBtn btn btn-sm btn-secondary'>Next</button>";
-    echo "</div></div></div>";
+    // Save chart config for later output
+    $chartConfigs[] = [
+        'id' => "chart-$tabId",
+        'title' => "$categoryA vs $categoryB - " . ucfirst($tabId),
+        'catA' => $categoryA,
+        'catB' => $categoryB,
+        'dataA' => implode(',', $jsDataA),
+        'dataB' => implode(',', $jsDataB)
+    ];
 }
+
 
 ?>
 
@@ -129,43 +136,6 @@ function renderPaginatedTab($tabId, $dataA, $dataB, $categoryA, $categoryB) {
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
-<script>
-window.onload = function () {
-<?php
-$chartIndex = 0;
-foreach ($data as $category => $platformData) {
-    foreach ($platformData as $platform => $values) {
-        $containerId = "chartContainer_" . $chartIndex;
-
-        // Prepare data points
-        $dataPoints = [];
-        foreach ($values as $label => $count) {
-            $dataPoints[] = ["label" => $label, "y" => $count];
-        }
-
-        // Output JavaScript chart creation
-        echo "var chart{$chartIndex} = new CanvasJS.Chart(\"{$containerId}\", {
-            animationEnabled: true,
-            title: {
-                text: \"" . ucfirst($category) . " - " . $platform . "\"
-            },
-            data: [{
-                type: \"pie\",
-                showInLegend: true,
-                legendText: \"{label}\",
-                indexLabelFontSize: 14,
-                indexLabel: \"{label} - #percent%\",
-                yValueFormatString: \"#,##0\",
-                dataPoints: " . json_encode($dataPoints, JSON_NUMERIC_CHECK) . "
-            }]
-        });
-        chart{$chartIndex}.render();\n";
-        $chartIndex++;
-    }
-}
-?>
-};
-</script>
 </head>
 <body>
   <div class="d-flex">
@@ -232,13 +202,6 @@ foreach ($data as $category => $platformData) {
         </button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="gamepass-tab"
-                data-bs-toggle="tab" data-bs-target="#tab-gamepass"
-                type="button" role="tab" aria-controls="tab-gamepass" aria-selected="false">
-          Game Pass Subscription
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
         <button class="nav-link" id="delivery-tab"
                 data-bs-toggle="tab" data-bs-target="#tab-delivery"
                 type="button" role="tab" aria-controls="tab-delivery" aria-selected="false">
@@ -260,14 +223,22 @@ foreach ($data as $category => $platformData) {
                   "genres",
                   "budget",
                   "console",
-                  "game_pass",
                   "delivery",
                   "franchise"
               ];
 
-              foreach ($tabKeys as $key) {
-                  renderPaginatedTab($key, $data[$key][$categoryA], $data[$key][$categoryB], $categoryA, $categoryB);
+               foreach ($tabKeys as $key) {
+                  renderPaginatedTab(
+                      $key,
+                      $data[$key][$categoryA],
+                      $data[$key][$categoryB],
+                      $categoryA,
+                      $categoryB,
+                      $chartConfigs
+                  );
               }
+
+
         ?>
         <div class="tab-pane fade show active" id="tab-entry" role="tabpanel" aria-labelledby="entry-tab">
             <table class="compare-table data-table">
@@ -283,7 +254,6 @@ foreach ($data as $category => $platformData) {
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 <script>
   // Global arrays to manage charts
   const allCharts = []; // Stores actual CanvasJS chart objects
@@ -293,6 +263,7 @@ foreach ($data as $category => $platformData) {
     if (chart && typeof chart.render === 'function') {
       chart.render();
     }
+    
   }
 
   // Function to render all charts from their configurations
@@ -360,22 +331,43 @@ foreach ($data as $category => $platformData) {
 
   // 3. Re-render charts when their specific Bootstrap tab is shown
   // This is crucial for charts in initially hidden tabs (all tabs except the active one)
-  const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
-  tabs.forEach(tabButton => {
-      tabButton.addEventListener('shown.bs.tab', function (event) {
-          const targetTabId = event.target.dataset.bsTarget; // e.g., #tab-genres
-          const tabPane = document.querySelector(targetTabId);
+  // Always re-render charts when their tab is activated
+const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+tabs.forEach(tabButton => {
+    tabButton.addEventListener('shown.bs.tab', function (event) {
+        allCharts.forEach(safeRender); // <-- this is correct
+    });
+});
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        renderAllChartsFromConfig();
+    }, 200); // slightly longer delay
 
-          // Find all chart containers within the newly shown tab pane
-          const chartsInTab = allCharts.filter(chart =>
-              tabPane.contains(document.getElementById(chart.canvas.id))
-          );
-
-          chartsInTab.forEach(safeRender);
-      });
-  });
+});
 
 </script>
+
+<?php foreach ($chartConfigs as $cfg): ?>
+<script>
+chartConfigurations.push({
+    containerId: "<?= $cfg['id'] ?>",
+    options: {
+        animationEnabled: true,
+        theme: "light2",
+        title: { text: "<?= addslashes($cfg['title']) ?>" },
+        axisY: { title: "Count" },
+        axisX: { title: "Option", labelAngle: -45 },
+        toolTip: { shared: true },
+        legend: { cursor: "pointer" },
+        data: [
+            { type: "column", name: "<?= addslashes($cfg['catA']) ?>", showInLegend: true, dataPoints: [<?= $cfg['dataA'] ?>] },
+            { type: "column", name: "<?= addslashes($cfg['catB']) ?>", showInLegend: true, dataPoints: [<?= $cfg['dataB'] ?>] }
+        ]
+    }
+});
+
+</script>
+<?php endforeach; ?>
 
 </body>
 </html>
