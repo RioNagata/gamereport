@@ -1,5 +1,9 @@
 <?php 
-
+session_start();
+if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
+    header("location: login.php");
+    exit;
+}
 include 'config.php';
 
 $gameGenre = mysqli_query($link, "SELECT DISTINCT `meta_value` FROM `wp_gf_entry_meta` WHERE `meta_key` = '4'");
@@ -123,29 +127,32 @@ mysqli_close($link);
 
   <!-- ===== Genres ===== -->
   <div class="tab-pane fade show active" id="genre-pane" role="tabpanel" aria-labelledby="genre-tab">
-    <h1 class="table-title text-center">Top Genres</h1>
-    <div class="table-chart-wrapper mb-4">
-      <div class="paginated-section" id="genre-section">
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Count</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="pagination">
-          <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
-          <span class="pageInfo mx-2"></span>
-          <button class="nextBtn btn btn-sm btn-secondary">Next</button>
-        </div>
-      </div>
-      <div>
-        <div id="chartGenres" class="chart"></div>
+  <h1 class="table-title text-center">Top Genres</h1>
+  <div class="table-chart-wrapper mb-4">
+    <!-- Table Section -->
+    <div class="paginated-section" id="genre-section">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Count</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="pagination">
+        <button class="prevBtn btn btn-sm btn-secondary">Previous</button>
+        <span class="pageInfo mx-2"></span>
+        <button class="nextBtn btn btn-sm btn-secondary">Next</button>
       </div>
     </div>
+    <!-- Chart Section -->
+    <div>
+      <div id="chartGenres" class="chart"></div>
+    </div>
   </div>
+</div>
 
   <!-- ===== Consoles ===== -->
   <div class="tab-pane fade" id="console-pane" role="tabpanel" aria-labelledby="console-tab">
-    <h1 class="table-title text-center">Top Consoles</h1>
-    <div class="table-chart-wrapper mb-4">
+  <h1 class="table-title text-center">Top Consoles</h1>
+  <div class="table-chart-wrapper mb-4">
+    <div>
       <div class="paginated-section" id="console-section">
         <table class="data-table">
           <thead><tr><th>Name</th><th>Count</th></tr></thead>
@@ -157,11 +164,12 @@ mysqli_close($link);
           <button class="nextBtn btn btn-sm btn-secondary">Next</button>
         </div>
       </div>
-      <div>
-        <div id="chartConsoles" class="chart"></div>
-      </div>
+    </div>
+    <div>
+      <div id="chartConsoles" class="chart"></div>
     </div>
   </div>
+</div>
 
   <!-- ===== Games ===== -->
   <div class="tab-pane fade" id="game-pane" role="tabpanel" aria-labelledby="game-tab">

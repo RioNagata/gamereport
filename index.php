@@ -1,6 +1,11 @@
 <?php 
-
 include 'config.php';
+print_r($_SESSION); 
+session_start();
+if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
+    header("location: login.php");
+    exit;
+}
 
 $sevenDays = [];
 $sevenDaysPoint = [];

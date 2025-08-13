@@ -15,7 +15,7 @@
       <ul>
         <li><a href="index.php"><i class='bx bx-home'></i> Dashboard</a></li>
         <li><a href="total.php"><i class='bx bx-grid-alt'></i> Total Report</a></li>
-        <li><a href="charts.html"><i class='bx bx-chart'></i> Charts</a></li>
+        <li><a href="compare.php"><i class='bx bx-chart'></i> Compare Consoles</a></li>
         <li><a href="forms.html"><i class='bx bx-list-check'></i> Forms</a></li>
         <li><a href="tables.html"><i class='bx bx-table'></i> Tables</a></li>
         <li><a href="pages.html"><i class='bx bx-folder'></i> Pages</a></li>
