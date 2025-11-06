@@ -15,15 +15,10 @@
       <ul>
         <li><a href="index.php"><i class='bx bx-home'></i> Dashboard</a></li>
         <li><a href="total.php"><i class='bx bx-grid-alt'></i> Total Report</a></li>
+        <li><a href="month.php"><i class='bx bx-list-check'></i>Monthly Report</a></li>
         <li><a href="compare.php"><i class='bx bx-chart'></i> Compare Consoles</a></li>
-        <li><a href="forms.html"><i class='bx bx-list-check'></i> Forms</a></li>
-        <li><a href="tables.html"><i class='bx bx-table'></i> Tables</a></li>
-        <li><a href="pages.html"><i class='bx bx-folder'></i> Pages</a></li>
-        <li><a href="email.html"><i class='bx bx-envelope'></i> Email</a></li>
-        <li><a href="layouts.html"><i class='bx bx-layout'></i> Layouts</a></li>
-        <li><a href="maps.html"><i class='bx bx-map'></i> Maps</a></li>
-        <li><a href="menu.html"><i class='bx bx-menu'></i> Menu Levels</a></li>
-        <li><a href="docs.html"><i class='bx bx-book'></i> Documentation</a></li>
+        <li><a href="compare_months.php"><i class='bx bx-chart'></i> Compare Months</a></li>
+        <li><a href="entry.php"><i class='bx bx-list-check'></i>Entries</a></li>
       </ul>
     </div>
   </div>

@@ -10,7 +10,14 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 $sevenDays = [];
 $sevenDaysPoint = [];
 
-$gameGenre = mysqli_query($link, "SELECT DISTINCT `meta_value` FROM `wp_gf_entry_meta` WHERE `meta_key` = '4'");
+$gameGenre = mysqli_query($link, "
+  SELECT TRIM(BOTH '[]' FROM TRIM(meta_value)) AS genre, COUNT(*) AS count
+  FROM wp_gf_entry_meta
+  WHERE meta_key = '4'
+  GROUP BY genre
+  ORDER BY count DESC
+");
+
 $gameConsole = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '3' GROUP By meta_value");
 $game = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '8' GROUP By meta_value");
 
@@ -52,32 +59,107 @@ foreach($sevenDays as $dates){
     $sevenDaysPoint[] = array("y" => $dailyresultcount, "label" => $dates);
 }
 
-foreach($genrearray as $data){
-  $genrecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $genrecount->execute();
-  $genreresult = $genrecount->get_result();
-  $genreresultcount = mysqli_num_rows($genreresult);
-  $genreResultArray[] = array("y" => $genreresultcount, "label" => $data);
-}
-arsort($genreResultArray);
+// --- Genre Total Count ---
+$genreResultArray = [];
+// $genrearray was populated earlier with the unique genre strings from the initial query.
+// Now, loop through each unique genre to get its ALL-TIME total count.
 
-foreach($consolearray as $data){
-  $consolecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $consolecount->execute();
-  $consoleresult = $consolecount->get_result();
-  $consoleresultcount = mysqli_num_rows($consoleresult);
-  $consoleResultArray[] = array("y" => $consoleresultcount, "label" => $data);
-}
-arsort($consoleResultArray);
+foreach ($genrearray as $data) {
+  // Use a prepared statement to get the total count for this genre
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta
+    WHERE TRIM(BOTH '[]' FROM TRIM(meta_value)) = ? 
+      AND meta_key = '4'
+  ");
+  
+  // Note: The value in $data already has the '[]' trimmed and spaces trimmed, 
+  // so we match it against the normalized column content.
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
 
-foreach($gamearray as $data){
-  $gamecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $gamecount->execute();
-  $gameresult = $gamecount->get_result();
-  $gameresultcount = mysqli_num_rows($gameresult);
-  $gameResultArray[] = array("y" => $gameresultcount, "label" => $data);
+  // Add the genre and its TOTAL count to the array.
+  $genreResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
 }
-arsort($gameResultArray);
+
+// Sort the final array by count (y) in descending order.
+usort($genreResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+
+// Remove entries where the count is 0 (optional, but keeps the list clean)
+$filtered_genre = array_filter($genreResultArray, function($item) {
+  return $item['y'] > 0;
+});
+$genreResultArray = array_values($filtered_genre);
+
+// $genreResultArray is now correct and ready for display
+
+// --- Console Count ---
+$consoleResultArray = [];
+
+foreach ($consolearray as $data) {
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta em
+    INNER JOIN wp_gf_entry e ON em.entry_id = e.id
+    WHERE em.meta_value = ?
+  ");
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
+
+  $consoleResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
+}
+
+usort($consoleResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+
+
+// --- Game Count ---
+$gameResultArray = [];
+
+foreach ($gamearray as $data) {
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta em
+    INNER JOIN wp_gf_entry e ON em.entry_id = e.id
+    WHERE em.meta_value = ?
+  ");
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
+
+  $gameResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
+}
+
+usort($gameResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+$filtered = array_filter($gameResultArray, function($item) {
+  return $item['y'] > 0;
+});
+
+$gameResultArray = array_values($filtered);
+
+
 ?>
 
 <!DOCTYPE html>
@@ -145,6 +227,17 @@ chart.render();
           <ul class="list-group">
           <?php 
             foreach($gameResultArray as $games){
+              ?><li class="list-group-item"><?php echo $games["label"];?> - <?php echo $games["y"];?></li>
+              <?php
+            }
+            ?>
+          </ul>
+        </div>
+        <div class="card bg-white">
+          <h5>Game Ranking</h5>
+          <ul class="list-group">
+          <?php 
+            foreach($genreResultArray as $games){
               ?><li class="list-group-item"><?php echo $games["label"];?> - <?php echo $games["y"];?></li>
               <?php
             }

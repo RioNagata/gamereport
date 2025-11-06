@@ -6,7 +6,13 @@ if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
 }
 include 'config.php';
 
-$gameGenre = mysqli_query($link, "SELECT DISTINCT `meta_value` FROM `wp_gf_entry_meta` WHERE `meta_key` = '4'");
+$gameGenre = mysqli_query($link, "
+  SELECT TRIM(BOTH '[]' FROM TRIM(meta_value)) AS genre, COUNT(*) AS count
+  FROM wp_gf_entry_meta
+  WHERE meta_key = '4'
+  GROUP BY genre
+  ORDER BY count DESC
+");
 $gameConsole = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '3' GROUP By meta_value");
 $game = mysqli_query($link, "SELECT meta_value FROM `wp_gf_entry_meta` WHERE `meta_key` = '8' GROUP By meta_value");
 
@@ -44,32 +50,107 @@ foreach($sevenDays as $dates){
     $sevenDaysPoint[] = array("y" => $dailyresultcount, "label" => $dates);
 }
 
-foreach($genrearray as $data){
-  $genrecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $genrecount->execute();
-  $genreresult = $genrecount->get_result();
-  $genreresultcount = mysqli_num_rows($genreresult);
-  $genreResultArray[] = array("y" => $genreresultcount, "label" => $data);
-}
-rsort($genreResultArray);
+// --- Genre Total Count ---
+$genreResultArray = [];
+// $genrearray was populated earlier with the unique genre strings from the initial query.
+// Now, loop through each unique genre to get its ALL-TIME total count.
 
-foreach($consolearray as $data){
-  $consolecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $consolecount->execute();
-  $consoleresult = $consolecount->get_result();
-  $consoleresultcount = mysqli_num_rows($consoleresult);
-  $consoleResultArray[] = array("y" => $consoleresultcount, "label" => $data);
-}
-rsort($consoleResultArray);
+foreach ($genrearray as $data) {
+  // Use a prepared statement to get the total count for this genre
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta
+    WHERE TRIM(BOTH '[]' FROM TRIM(meta_value)) = ? 
+      AND meta_key = '4'
+  ");
+  
+  // Note: The value in $data already has the '[]' trimmed and spaces trimmed, 
+  // so we match it against the normalized column content.
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
 
-foreach($gamearray as $data){
-  $gamecount = $link->prepare("SELECT * FROM wp_gf_entry_meta WHERE meta_value = '$data'");
-  $gamecount->execute();
-  $gameresult = $gamecount->get_result();
-  $gameresultcount = mysqli_num_rows($gameresult);
-  $gameResultArray[] = array("y" => $gameresultcount, "label" => $data);
+  // Add the genre and its TOTAL count to the array.
+  $genreResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
 }
-rsort($gameResultArray);
+
+// Sort the final array by count (y) in descending order.
+usort($genreResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+
+// Remove entries where the count is 0 (optional, but keeps the list clean)
+$filtered_genre = array_filter($genreResultArray, function($item) {
+  return $item['y'] > 0;
+});
+$genreResultArray = array_values($filtered_genre);
+
+// $genreResultArray is now correct and ready for display
+
+// --- Console Count ---
+$consoleResultArray = [];
+
+foreach ($consolearray as $data) {
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta em
+    INNER JOIN wp_gf_entry e ON em.entry_id = e.id
+    WHERE em.meta_value = ?
+  ");
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
+
+  $consoleResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
+}
+
+usort($consoleResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+
+
+// --- Game Count ---
+$gameResultArray = [];
+
+foreach ($gamearray as $data) {
+  $stmt = $link->prepare("
+    SELECT COUNT(*) as count
+    FROM wp_gf_entry_meta em
+    INNER JOIN wp_gf_entry e ON em.entry_id = e.id
+    WHERE em.meta_value = ?
+  ");
+  $stmt->bind_param("s", $data);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $row = $result->fetch_assoc();
+  $count = $row['count'] ?? 0;
+
+  $gameResultArray[] = [
+    "y" => $count,
+    "label" => $data
+  ];
+}
+
+usort($gameResultArray, function($a, $b) {
+  return $b['y'] <=> $a['y'];
+});
+$filtered = array_filter($gameResultArray, function($item) {
+  return $item['y'] > 0;
+});
+
+$gameResultArray = array_values($filtered);
+
+
 
 mysqli_close($link);
 ?>
@@ -84,6 +165,13 @@ mysqli_close($link);
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+.chart {
+  width: 100%;
+  min-height: 500px; /* or 600px for bigger */
+}
+</style>
+
 </head>
 
 <body>
@@ -206,23 +294,23 @@ mysqli_close($link);
   const gameData    = <?php echo json_encode($gameResultArray,    JSON_NUMERIC_CHECK); ?>;
 </script>
 <script>
-const genreChart   = new CanvasJS.Chart("chartGenres", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Genres" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($genreResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
+function makeChart(container, title, data) {
+  const chart = new CanvasJS.Chart(container, {
+    animationEnabled: true,
+    theme: "light2",
+    title:{ text: title },
+    axisY:{ title: "Entries" },
+    axisX:{ labelAngle: -45 },
+    legend:{ cursor: "pointer" },
+    data: [
+      { type: "column", name: month1, showInLegend: true, dataPoints: data.map(r => ({ label: r.label, y: r.y1 })) },
+      { type: "column", name: month2, showInLegend: true, dataPoints: data.map(r => ({ label: r.label, y: r.y2 })) }
+    ]
+  });
+  return chart; // Don't render yet
+}
 
-const consoleChart = new CanvasJS.Chart("chartConsoles", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Consoles" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($consoleResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
 
-const gameChart    = new CanvasJS.Chart("chartGames", {
-  animationEnabled: true, theme: "light2",
-  title:{ text:"Top Games" },
-  data :[{ type:"column", dataPoints: <?php echo json_encode($gameResultArray, JSON_NUMERIC_CHECK); ?> }]
-});
 
 /* ---------- paginator helper ---------- */
 function initPaginatedTable (sectionId, data, rowsPerPage = 5) {
@@ -237,7 +325,13 @@ function initPaginatedTable (sectionId, data, rowsPerPage = 5) {
   const render = () => {
     const start = (page - 1) * rowsPerPage;
     const slice = data.slice(start, start + rowsPerPage);
-    tbody.innerHTML = slice.map(r => `<tr><td>${r.label}</td><td>${r.y}</td></tr>`).join('');
+    tbody.innerHTML = slice.map(r => `
+  <tr>
+    <td><a href="category.php?item=${encodeURIComponent(r.label)}" class="text-decoration-none">${r.label}</a></td>
+    <td>${r.y}</td>
+  </tr>
+`).join('');
+
     const pages = Math.max(1, Math.ceil(data.length / rowsPerPage));
     pageInfo.textContent = `Page ${page} of ${pages}`;
     prevBtn.disabled = page === 1;
@@ -277,6 +371,31 @@ window.addEventListener('resize', () => {
 
   /* build charts … safeRender … tab listener … (full block we sent) */
 </script>
+<script>
+const genreChart   = makeChart("chartGenres",   "Genres Comparison",   genreData);
+const consoleChart = makeChart("chartConsoles", "Consoles Comparison", consoleData);
+const gameChart    = makeChart("chartGames",    "Games Comparison",    gameData);
+
+// Render the first (visible) one immediately
+genreChart.render();
+
+// When a tab becomes visible, re-render its chart
+document.getElementById('statsTabs').addEventListener('shown.bs.tab', e => {
+  setTimeout(() => {
+    if (e.target.id === 'console-tab') consoleChart.render();
+    if (e.target.id === 'game-tab')    gameChart.render();
+    if (e.target.id === 'genre-tab')   genreChart.render();
+  }, 200); // delay ensures Bootstrap finishes tab animation
+});
+
+// Also handle window resizing
+window.addEventListener('resize', () => {
+  [genreChart, consoleChart, gameChart].forEach(c => c.render());
+});
+
+</script>
+
+
 
 </body>
 
